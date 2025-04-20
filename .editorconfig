@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "defaultSeverity": "Warning",
+  "rules": {
+    "dotnet_diagnostic.CA1822.severity": "error",
+    "dotnet_diagnostic.CA2000.severity": "warning",
+    "dotnet_diagnostic.CA2200.severity": "info"
+  }
+}
