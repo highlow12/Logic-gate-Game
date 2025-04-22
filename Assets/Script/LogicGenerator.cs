@@ -89,9 +89,8 @@ public class LogicGenerator : Singleton<LogicGenerator>
 
         for (int i = 0; i < MathF.Ceiling((float)inputCount / gate.Count); i++)
         {
-            gates.AddRange(gate); // Add gates to the list for random selection
+            gates.AddRange(gate.OrderBy(x => random.Next()).ToList()); // Add gates to the list for random selection
         }
-        gates = gates.OrderBy(x => random.Next()).ToList(); // Shuffle the gates
 
         foreach(var previousGate in previousLayer)
         {
