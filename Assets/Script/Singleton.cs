@@ -1,15 +1,36 @@
 using UnityEngine;
 
 /// <summary>
-/// Generic singleton class that can be inherited by any MonoBehaviour
+/// Generic singleton class that can be inherited by any MonoBehaviour.
+/// 어떤 MonoBehaviour에서도 상속받아 사용할 수 있는 제네릭 싱글톤 클래스입니다.
 /// </summary>
-/// <typeparam name="T">Type of the singleton</typeparam>
+/// <typeparam name="T">The type of the singleton component. 싱글톤 컴포넌트의 타입입니다.</typeparam>
 public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
 {
+    /// <summary>
+    /// Private instance of the singleton
+    /// 싱글톤의 비공개 인스턴스
+    /// </summary>
     private static T _instance;
+    
+    /// <summary>
+    /// Thread safety lock object
+    /// 스레드 안전성을 위한 락 객체
+    /// </summary>
     private static readonly object _lock = new object();
+    
+    /// <summary>
+    /// Flag to check if application is quitting
+    /// 애플리케이션 종료 여부를 확인하는 플래그
+    /// </summary>
     private static bool _applicationIsQuitting = false;
     
+    /// <summary>
+    /// Public accessor for the singleton instance.
+    /// 싱글톤 인스턴스에 대한 공개 접근자.
+    /// If no instance exists, one will be created.
+    /// 인스턴스가 없는 경우 새로 생성합니다.
+    /// </summary>
     public static T Instance
     {
         get
@@ -49,6 +70,10 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
         }
     }
     
+    /// <summary>
+    /// Called when the MonoBehaviour is initialized. Ensures only one instance exists.
+    /// MonoBehaviour가 초기화될 때 호출됩니다. 하나의 인스턴스만 존재하도록 보장합니다.
+    /// </summary>
     protected virtual void Awake()
     {
         if (_instance == null)
@@ -63,6 +88,12 @@ public abstract class Singleton<T> : MonoBehaviour where T : MonoBehaviour
         }
     }
     
+    /// <summary>
+    /// Called when the application is about to quit.
+    /// Sets the application quitting flag to prevent access after quitting.
+    /// 애플리케이션이 종료될 때 호출됩니다.
+    /// 종료 후 접근을 방지하기 위해 애플리케이션 종료 플래그를 설정합니다.
+    /// </summary>
     protected virtual void OnApplicationQuit()
     {
         _applicationIsQuitting = true;
