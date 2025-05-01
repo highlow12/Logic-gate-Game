@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 
 // 전체 로직 회로를 나타내는 클래스입니다.
@@ -27,5 +28,22 @@ public class LogicCircuit
         OutputGates = new List<LogicGate>();
         HiddenLayers = new List<List<LogicGate>>();
         AllGates = new List<LogicGate>();
+    }
+
+    internal void PopulateAllGates()
+    {
+        AllGates.Clear(); // 기존 목록을 비웁니다.
+
+        // 입력 게이트 추가
+        AllGates.AddRange(InputGates);
+
+        // 숨겨진 레이어의 게이트 추가
+        foreach (var layer in HiddenLayers)
+        {
+            AllGates.AddRange(layer);
+        }
+
+        // 출력 게이트 추가
+        AllGates.AddRange(OutputGates);
     }
 }

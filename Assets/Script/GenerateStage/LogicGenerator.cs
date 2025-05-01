@@ -303,43 +303,61 @@ public class LogicGenerator : Singleton<LogicGenerator>
     // 로직 회로의 진리표를 생성합니다.
     // 매개변수:
     //   logic: 진리표를 생성할 로직 회로
-    // 반환값: 생성된 진리표
+    // 반환값: 생성된 진리표 (TruthTable 객체)
     public TruthTable GenerateTruthTable(LogicCircuit logic)
     {
         int inputCount = logic.InputGates.Count;
         int outputCount = logic.OutputGates.Count;
-        
+
         // 진리표 객체 생성
         TruthTable truthTable = new TruthTable(inputCount, outputCount);
-        
+
         // 가능한 모든 입력 조합 수 계산 (2^n)
         int totalCombinations = 1 << inputCount;
-        
+
         // 모든 가능한 입력 조합에 대해 반복
         for (int i = 0; i < totalCombinations; i++)
         {
             // 현재 조합에 대한 입력 배열 생성
             bool[] currentInputs = new bool[inputCount];
-            
-            // i의 이진 표현을 사용하여 현재 입력 조합 설정
+
+            // i의 이진 표현을 사용하여 현재 입력 조합 설정 및 입력 게이트 값 설정
             for (int j = 0; j < inputCount; j++)
             {
                 // i의 j번째 비트가 1인지 확인
                 currentInputs[j] = ((i >> j) & 1) == 1;
-                
-                // 입력 게이트의 값을 설정
-                logic.InputGates[j].ResetState();
+
+                // 입력 게이트의 값을 설정 (상태 초기화는 SetValue 내부 또는 State 접근 시 처리될 수 있음)
+                // InputGate는 ResetState가 필요 없을 수 있지만, 명확성을 위해 호출하거나 SetValue가 처리하도록 보장
+                logic.InputGates[j].ResetState(); // InputGate의 상태도 명시적으로 리셋
                 ((InputGate)logic.InputGates[j]).SetValue(currentInputs[j]);
             }
-            
+
+            // 중요: 현재 입력 조합에 대한 출력을 계산하기 전에
+            // 모든 히든 레이어 및 출력 게이트의 상태를 초기화합니다.
+            // 이렇게 하면 이전 입력 조합의 계산 결과가 다음 계산에 영향을 주지 않습니다.
+            foreach (var layer in logic.HiddenLayers)
+            {
+                foreach (var gate in layer)
+                {
+                    gate.ResetState();
+                }
+            }
+            foreach (var gate in logic.OutputGates)
+            {
+                gate.ResetState();
+            }
+
+
             // 현재 입력에 대한 출력 계산
             bool[] currentOutputs = new bool[outputCount];
-            
+
             for (int j = 0; j < outputCount; j++)
             {
-                // 모든 게이트의 상태를 초기화하고 출력 게이트의 상태 계산
+                // 출력 게이트의 상태를 가져옵니다.
+                // State 프로퍼티 getter는 필요에 따라 재귀적으로 상태를 계산해야 합니다.
                 bool? outputState = logic.OutputGates[j].State;
-                
+
                 // null 체크 후 결과 저장
                 if (outputState.HasValue)
                 {
@@ -347,15 +365,17 @@ public class LogicGenerator : Singleton<LogicGenerator>
                 }
                 else
                 {
-                    Debug.LogWarning($"출력 게이트 {j}의 상태가 null입니다.");
-                    currentOutputs[j] = false;
+                    // 상태 계산에 실패했거나 로직 오류가 있을 경우
+                    Debug.LogWarning($"출력 게이트 {j}의 상태를 계산할 수 없습니다 (결과: null). 입력 조합: {i}");
+                    currentOutputs[j] = false; // 기본값 또는 오류 값으로 처리
                 }
             }
-            
+
             // 진리표에 현재 행 추가
             truthTable.AddRow(currentInputs, currentOutputs);
         }
-        
+
+        // 구조화된 TruthTable 객체 반환
         return truthTable;
     }
     #endregion

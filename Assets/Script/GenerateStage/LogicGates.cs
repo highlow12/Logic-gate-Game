@@ -1,6 +1,17 @@
 using UnityEngine;
 using System.Collections.Generic;
 
+public enum LogicGateType
+{
+    AND,
+    OR,
+    NOT,
+    XOR,
+    WIRE,
+    INPUT,
+    OUTPUT
+}
+
 public abstract class LogicGate
 {
     // 게이트의 입력 개수입니다.
