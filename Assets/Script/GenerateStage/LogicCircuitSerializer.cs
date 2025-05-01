@@ -177,6 +177,59 @@ public class LogicCircuitSerializer
         return "unknown_not_found";
     }
 
+    // JSON 문자열로부터 LogicCircuitData 객체를 로드 (역직렬화)
+    public LogicCircuitData LoadLogicCircuitFromJson(string jsonString)
+    {
+        if (string.IsNullOrEmpty(jsonString))
+        {
+            Debug.LogError("JSON 문자열이 비어있거나 null입니다.");
+            return null;
+        }
+
+        try
+        {
+            // Newtonsoft.Json을 사용하여 JSON 문자열을 LogicCircuitData 객체로 역직렬화
+            LogicCircuitData circuitData = JsonConvert.DeserializeObject<LogicCircuitData>(jsonString);
+            if (circuitData == null)
+            {
+                 Debug.LogError("JSON 역직렬화 결과가 null입니다. JSON 형식을 확인하세요.");
+                 return null;
+            }
+            return circuitData;
+        }
+        catch (JsonException ex)
+        {
+            Debug.LogError($"JSON 역직렬화 중 오류 발생: {ex.Message}\nJSON: {jsonString}");
+            return null;
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"JSON 처리 중 예기치 않은 오류 발생: {ex.Message}");
+            return null;
+        }
+    }
+
+    // 파일 경로로부터 JSON을 로드하는 오버로드 (선택적)
+    public LogicCircuitData LoadLogicCircuitFromFile(string filePath)
+    {
+        if (!System.IO.File.Exists(filePath))
+        {
+            Debug.LogError($"JSON 파일을 찾을 수 없습니다: {filePath}");
+            return null;
+        }
+
+        try
+        {
+            string jsonString = System.IO.File.ReadAllText(filePath);
+            return LoadLogicCircuitFromJson(jsonString);
+        }
+        catch (System.Exception ex)
+        {
+            Debug.LogError($"JSON 파일 읽기 중 오류 발생: {ex.Message}");
+            return null;
+        }
+    }
+
     #if UNITY_EDITOR
     // 디버깅용 회로 구조 문자열 생성 (에디터 전용)
     public string DebugCircuitStructure(LogicCircuit circuit)
