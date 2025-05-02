@@ -73,3 +73,11 @@ MonoBehaviour:
     ColorType: 0
     IconType: -1
     CustomFolderColor: {r: 1, g: 1, b: 1, a: 1}
+  - Path: Assets/Sprites
+    ColorType: 9
+    IconType: 1
+    CustomFolderColor: {r: 1, g: 1, b: 1, a: 1}
+  - Path: Assets/Resources/Prefabs
+    ColorType: -1
+    IconType: 3
+    CustomFolderColor: {r: 1, g: 1, b: 1, a: 1}
