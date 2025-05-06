@@ -205,8 +205,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 330585543}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.0874133, y: 0.89983153, z: -0.21193317, w: -0.3711421}
-  m_LocalPosition: {x: 4.25087, y: 3.007132, z: 4.276452}
+  m_LocalRotation: {x: -0.11264186, y: 0.88388294, z: -0.27662483, w: -0.35991886}
+  m_LocalPosition: {x: 5.7468786, y: 5.7084303, z: 5.8864737}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -496,10 +496,15 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5a6641628e8855d47a0d6cd591e56d40, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  jsonFile: {fileID: 0}
+  jsonFile: {fileID: 4900000, guid: 6f619d09efc7e53409f1af532c9c015a, type: 3}
   horizontalSpacing: 5
   verticalSpacing: 2
   gateParent: {fileID: 0}
+  lineMaterial: {fileID: 2100000, guid: 70e8e94ac13eccc499c7fc2f57db93e0, type: 2}
+  lineWidth: 0.05
+  lineColor: {r: 0, g: 0, b: 0, a: 1}
+  outputPointName: Out
+  inputPointPrefix: In
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
   m_ObjectHideFlags: 0
