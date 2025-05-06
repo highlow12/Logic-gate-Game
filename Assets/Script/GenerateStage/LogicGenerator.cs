@@ -229,76 +229,39 @@ public class LogicGenerator : Singleton<LogicGenerator>
     //   random: 무작위 수 생성기
     private void ConnectGateInputs(List<LogicGate> currentLayerGates, List<LogicGate> previousLayerOutputs, System.Random random)
     {
-        if (previousLayerOutputs == null || previousLayerOutputs.Count == 0)
-        {
-            Debug.LogError("ConnectGateInputs: 이전 레이어 출력이 비어 있습니다.");
-            return;
-        }
+        var connectNeeded = previousLayerOutputs.OrderBy(x => random.Next()).ToList();
 
-        int previousCount = previousLayerOutputs.Count;
-
-        foreach (var currentGate in currentLayerGates)
+        foreach(var gate in currentLayerGates)
         {
             // InputGate는 입력을 받지 않으므로 건너뜁니다.
-            if (currentGate is InputGate) continue;
+            if (gate is InputGate) continue;
 
-            int inputNeeded = currentGate.InputCount;
+            int inputNeeded = gate.InputCount;
             // 입력이 필요 없는 게이트(예: 일부 특수 게이트)는 건너뜁니다.
             if (inputNeeded == 0) continue;
 
-            // 이전 레이어 출력을 복사하고 섞습니다. (LINQ 사용)
-            // 매번 새로운 순서로 섞어 다양한 연결 가능성을 만듭니다.
-            List<LogicGate> availableSources = previousLayerOutputs.OrderBy(x => random.Next()).ToList();
-
-            // 필요한 입력 수만큼 소스 게이트를 저장할 리스트
-            List<LogicGate> sourcesToConnect = new List<LogicGate>();
-
-            if (inputNeeded <= previousCount)
+            for (int i = 0; i < gate.InputCount; i++)
             {
-                // 필요한 입력 수가 이전 레이어 게이트 수보다 작거나 같으면, 중복 없이 선택 가능
-                // 섞인 리스트에서 앞에서부터 필요한 개수만큼 가져옵니다.
-                sourcesToConnect.AddRange(availableSources.Take(inputNeeded));
-            }
-            else
-            {
-                // 필요한 입력 수가 이전 레이어 게이트 수보다 많으면, 중복 연결이 불가피합니다.
-                // 일단 이전 레이어의 모든 게이트를 사용합니다.
-                sourcesToConnect.AddRange(availableSources);
-                int remainingNeeded = inputNeeded - previousCount;
-                // 부족한 만큼, 섞인 리스트를 순환하면서 추가합니다.
-                for (int i = 0; i < remainingNeeded; i++)
+                // 연결할 소스 게이트를 무작위로 선택
+                LogicGate sourceGate = connectNeeded[0];
+                // ConnectInput 메서드를 호출하여 연결 시도
+                if (!gate.ConnectInput(i, sourceGate))
                 {
-                    // 순환 인덱스 (i % previousCount)를 사용하여 중복 추가
-                    sourcesToConnect.Add(availableSources[i % previousCount]);
+                    // 연결 실패 시 경고 로그
+                    Debug.LogWarning($"게이트 {DetermineGateId(gate, null)}의 입력 {i}를 게이트 {DetermineGateId(sourceGate, null)}에 연결하는 데 실패했습니다.");
                 }
-                // 중복 연결이 발생했음을 경고합니다.
-                Debug.LogWarning($"게이트 {DetermineGateId(currentGate, null)} ({currentGate.GetType().Name})는 필요한 입력({inputNeeded})이 이전 레이어 게이트 수({previousCount})보다 많아 입력이 중복 연결됩니다.");
-            }
+                // 연결된 소스 게이트를 목록에서 제거
+                connectNeeded.RemoveAt(0); // 연결된 소스 제거
 
-            // 선택된 소스들을 현재 게이트의 입력 인덱스 0부터 순서대로 연결합니다.
-            for (int i = 0; i < inputNeeded; i++)
-            {
-                // sourcesToConnect 리스트에 충분한 소스가 있는지 확인 (이론상 항상 참이어야 함)
-                if (i < sourcesToConnect.Count)
+                if (connectNeeded.Count == 0)
                 {
-                    LogicGate sourceGate = sourcesToConnect[i];
-                    // ConnectInput 메서드를 호출하여 연결 시도
-                    if (!currentGate.ConnectInput(i, sourceGate))
-                    {
-                        // 연결 실패 시 경고 로그 (ConnectInput 내부에서도 로그를 남길 수 있음)
-                        Debug.LogWarning($"게이트 {DetermineGateId(currentGate, null)}의 입력 {i}를 게이트 {DetermineGateId(sourceGate, null)}에 연결하는 데 실패했습니다.");
-                    }
-                }
-                else
-                {
-                    // 이 로그는 로직 오류가 없는 한 발생하지 않아야 합니다.
-                    Debug.LogError($"게이트 {DetermineGateId(currentGate, null)}의 입력 {i}에 연결할 소스 게이트가 부족합니다. (소스 {sourcesToConnect.Count}개 선택됨, 필요 {inputNeeded}개)");
+                    connectNeeded = previousLayerOutputs.OrderBy(x => random.Next()).ToList();
                 }
             }
         }
     }
     #endregion
-
+    
     #region 진리표 생성
     // 로직 회로의 진리표를 생성합니다.
     // 매개변수:

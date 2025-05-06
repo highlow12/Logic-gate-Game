@@ -213,6 +213,58 @@ public class LogicGeneratorTest : MonoBehaviour
                 Debug.LogError(logMessage);
             }
         }
+
+        // 맵 생성 버튼 (MapGenerator로 보내기)
+        if (GUILayout.Button("맵 생성 (MapGenerator로 보내기)"))
+        {
+            try
+            {
+                // 1. 임시 JSON 파일 생성
+                string timestamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
+                string fileName = $"LogicCircuit_{timestamp}_temp.json";
+                string savePath = System.IO.Path.Combine(Application.dataPath, fileName);
+                object json = LogicGenerator.Instance.GetLogicJSON(testCircuit, savePath);
+
+                // 2. 파일을 TextAsset으로 로드 (런타임에는 Resources 폴더 필요)
+                // 임시로 파일을 Resources로 복사 (에디터 환경에서만 동작)
+#if UNITY_EDITOR
+                string resourcesPath = System.IO.Path.Combine(Application.dataPath, "Resources", fileName);
+                System.IO.File.Copy(savePath, resourcesPath, true);
+                UnityEditor.AssetDatabase.Refresh();
+                string assetPath = "Resources/" + fileName;
+                assetPath = assetPath.Replace("\\", "/");
+                TextAsset jsonTextAsset = UnityEditor.AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Resources/" + fileName);
+#else
+                // 빌드 환경에서는 Resources.Load 사용 (파일이 Resources 폴더에 있어야 함)
+                string resourceName = fileName.Replace(".json", "");
+                TextAsset jsonTextAsset = Resources.Load<TextAsset>(resourceName);
+#endif
+                // 3. MapGenerator 인스턴스 찾기 및 맵 생성
+                MapGenerator mapGen = FindAnyObjectByType<MapGenerator>();
+                if (mapGen == null)
+                {
+                    logMessage = "MapGenerator 오브젝트를 찾을 수 없습니다.";
+                    Debug.LogError(logMessage);
+                }
+                else if (jsonTextAsset == null)
+                {
+                    logMessage = $"임시 JSON TextAsset을 불러올 수 없습니다. 파일명: {fileName}";
+                    Debug.LogError(logMessage);
+                }
+                else
+                {
+                    mapGen.jsonFile = jsonTextAsset;
+                    mapGen.GenerateMap();
+                    logMessage = $"맵 생성 완료!\n파일: {fileName}";
+                    Debug.Log(logMessage);
+                }
+            }
+            catch (System.Exception e)
+            {
+                logMessage = "맵 생성 실패: " + e.Message;
+                Debug.LogError(logMessage);
+            }
+        }
         
         // 버튼 활성화 상태 복원
         GUI.enabled = true;
