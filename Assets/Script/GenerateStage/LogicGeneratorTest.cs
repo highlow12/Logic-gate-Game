@@ -26,6 +26,11 @@ public class LogicGeneratorTest : MonoBehaviour
     
     // 콘솔에 표시할 로그 메시지
     private string logMessage = "";
+
+    // --- 추가: 기능별 유틸리티 인스턴스 ---
+    private DifficultyCalculator difficultyCalculator = new DifficultyCalculator();
+    private LogicCircuitSerializer circuitSerializer = new LogicCircuitSerializer();
+    private BooleanExpressionGenerator boolExprGenerator;
     
     // 시작 시 초기화
     private void Start()
@@ -37,6 +42,8 @@ public class LogicGeneratorTest : MonoBehaviour
         outputCountStr = outputCount.ToString();
         layerCountStr = layerCount.ToString();
         layerSizeStr = layerSize.ToString();
+
+        boolExprGenerator = new BooleanExpressionGenerator(circuitSerializer);
     }
     
     // OnGUI 메소드를 사용하여 UI 요소 표시
@@ -154,7 +161,7 @@ public class LogicGeneratorTest : MonoBehaviour
         {
             try
             {
-                int difficulty = LogicGenerator.Instance.GetDifficulty(testCircuit);
+                int difficulty = difficultyCalculator.GetDifficulty(testCircuit);
                 logMessage = $"계산된 난이도: {difficulty}";
                 Debug.Log(logMessage);
             }
@@ -170,16 +177,16 @@ public class LogicGeneratorTest : MonoBehaviour
         {
             try
             {
-                // 저장 경로 생성 (Assets 폴더 내에 LogicCircuit_{현재시간}.json 형식)
+                // 저장 경로 생성 (Assets 폴더 내에 LogicCircuit_{현재시간}.logic 형식)
                 string timestamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                string fileName = $"LogicCircuit_{timestamp}.json";
+                string fileName = $"LogicCircuit_{timestamp}.logic";
                 string savePath = System.IO.Path.Combine(Application.dataPath, fileName);
-                
+
                 // JSON 변환 및 파일 저장
-                object json = LogicGenerator.Instance.GetLogicJSON(testCircuit, savePath);
-                
+                string json = circuitSerializer.GetLogicJSON(testCircuit, savePath);
+
                 // 성공 메시지 표시
-                logMessage = $"JSON 변환 및 파일 저장 완료!\n저장 경로: {savePath}\n\n{json?.ToString()}";
+                logMessage = $"JSON 변환 및 파일 저장 완료!\n저장 경로: {savePath}\n\n{json}";
                 Debug.Log($"JSON 파일 저장 완료: {savePath}");
             }
             catch (System.Exception e)
@@ -190,20 +197,16 @@ public class LogicGeneratorTest : MonoBehaviour
         }
         
         // 불 대수 표현식 생성 버튼
-        if (GUILayout.Button("불 대수 표현식 생성 (GenerateBooleanExpressions)")) // 메서드 이름 변경
+        if (GUILayout.Button("불 대수 표현식 생성 (GenerateBooleanExpressions)"))
         {
             try
             {
-                // GenerateBooleanExpressions 메서드 호출
-                System.Collections.Generic.List<string> expressions = LogicGenerator.Instance.GenerateBooleanExpressions(testCircuit);
-                
-                // 결과 문자열 생성
+                var expressions = boolExprGenerator.GenerateBooleanExpressions(testCircuit);
                 string expressionsText = "생성된 불 대수 표현식:\n";
                 for(int i = 0; i < expressions.Count; i++)
                 {
                     expressionsText += $"출력 {i}: {expressions[i]}\n";
                 }
-                
                 logMessage = expressionsText;
                 Debug.Log("불 대수 표현식 생성 완료!");
             }
@@ -221,25 +224,38 @@ public class LogicGeneratorTest : MonoBehaviour
             {
                 // 1. 임시 JSON 파일 생성
                 string timestamp = System.DateTime.Now.ToString("yyyyMMdd_HHmmss");
-                string fileName = $"LogicCircuit_{timestamp}_temp.json";
+                string fileName = $"LogicCircuit_{timestamp}_temp.logic";
                 string savePath = System.IO.Path.Combine(Application.dataPath, fileName);
-                object json = LogicGenerator.Instance.GetLogicJSON(testCircuit, savePath);
+                string json = circuitSerializer.GetLogicJSON(testCircuit, savePath);
 
-                // 2. 파일을 TextAsset으로 로드 (런타임에는 Resources 폴더 필요)
-                // 임시로 파일을 Resources로 복사 (에디터 환경에서만 동작)
 #if UNITY_EDITOR
                 string resourcesPath = System.IO.Path.Combine(Application.dataPath, "Resources", fileName);
                 System.IO.File.Copy(savePath, resourcesPath, true);
                 UnityEditor.AssetDatabase.Refresh();
                 string assetPath = "Resources/" + fileName;
                 assetPath = assetPath.Replace("\\", "/");
-                TextAsset jsonTextAsset = UnityEditor.AssetDatabase.LoadAssetAtPath<TextAsset>("Assets/Resources/" + fileName);
+                UnityEditor.DefaultAsset logicAsset = UnityEditor.AssetDatabase.LoadAssetAtPath<UnityEditor.DefaultAsset>("Assets/Resources/" + fileName);
+                MapGenerator mapGen = FindAnyObjectByType<MapGenerator>();
+                if (mapGen == null)
+                {
+                    logMessage = "MapGenerator 오브젝트를 찾을 수 없습니다.";
+                    Debug.LogError(logMessage);
+                }
+                else if (logicAsset == null)
+                {
+                    logMessage = $"임시 logic 파일(DefaultAsset)을 불러올 수 없습니다. 파일명: {fileName}";
+                    Debug.LogError(logMessage);
+                }
+                else
+                {
+                    mapGen.GenerateMap(logicAsset); // DefaultAsset을 MapGenerator로 전달
+                    logMessage = $"맵 생성 완료!\n파일: {fileName}";
+                    Debug.Log(logMessage);
+                }
 #else
                 // 빌드 환경에서는 Resources.Load 사용 (파일이 Resources 폴더에 있어야 함)
-                string resourceName = fileName.Replace(".json", "");
+                string resourceName = fileName.Replace(".logic", "");
                 TextAsset jsonTextAsset = Resources.Load<TextAsset>(resourceName);
-#endif
-                // 3. MapGenerator 인스턴스 찾기 및 맵 생성
                 MapGenerator mapGen = FindAnyObjectByType<MapGenerator>();
                 if (mapGen == null)
                 {
@@ -253,11 +269,11 @@ public class LogicGeneratorTest : MonoBehaviour
                 }
                 else
                 {
-                    mapGen.jsonFile = jsonTextAsset;
-                    mapGen.GenerateMap();
+                    mapGen.GenerateMap(jsonTextAsset); // 기존 방식 유지
                     logMessage = $"맵 생성 완료!\n파일: {fileName}";
                     Debug.Log(logMessage);
                 }
+#endif
             }
             catch (System.Exception e)
             {

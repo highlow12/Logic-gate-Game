@@ -2,11 +2,12 @@ using UnityEngine;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq; // For FindIndex
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 
 public class MapGenerator : MonoBehaviour
 {
-    [Header("Data Source")]
-    public TextAsset jsonFile; // Inspector에서 할당할 JSON 파일
 
     [Header("Layout Settings")]
     public float horizontalSpacing = 3f; // 열(레이어) 간 가로 간격
@@ -44,16 +45,6 @@ public class MapGenerator : MonoBehaviour
     {
         // 1. 프리팹 미리 로드
         PreloadPrefabs();
-
-        // 2. 맵 생성 시작
-        if (jsonFile != null)
-        {
-            GenerateMap();
-        }
-        else
-        {
-            Debug.LogError("JSON 파일이 MapGenerator에 할당되지 않았습니다.");
-        }
     }
 
     // 필요한 프리팹들을 미리 로드하는 함수
@@ -80,7 +71,83 @@ public class MapGenerator : MonoBehaviour
         Debug.Log("프리팹 미리 로드가 완료되었습니다.");
     }
 
-    public void GenerateMap()
+#if UNITY_EDITOR
+    public void GenerateMap(DefaultAsset logicAsset)
+    {
+        // 0. 기존 맵 오브젝트 삭제 (필요시)
+        ClearMap();
+
+        // gateParent가 할당되지 않았으면 새로 생성
+        if (gateParent == null)
+        {
+            GameObject generatedParentObj = new GameObject("Generated Gates");
+            gateParent = generatedParentObj.transform;
+            Debug.Log("gateParent가 설정되지 않아 'Generated Gates' 오브젝트를 생성하여 사용합니다.");
+        }
+
+        // gateParent의 위치를 원점으로 초기화 (중심 계산을 위해)
+        gateParent.position = Vector3.zero;
+        gateParent.rotation = Quaternion.identity;
+
+        // 1. 파일 경로 얻기 및 텍스트 읽기
+        string assetPath = AssetDatabase.GetAssetPath(logicAsset);
+        if (string.IsNullOrEmpty(assetPath) || !System.IO.File.Exists(assetPath))
+        {
+            Debug.LogError($"DefaultAsset에서 파일 경로를 찾을 수 없거나 파일이 존재하지 않습니다: {assetPath}");
+            return;
+        }
+        string fileText = System.IO.File.ReadAllText(assetPath);
+
+        // 2. JSON 로드 및 파싱
+        LogicCircuitData circuitData = serializer.LoadLogicCircuitFromJson(fileText);
+        if (circuitData == null)
+        {
+            Debug.LogError("로직 데이터를 로드하거나 파싱하는 데 실패했습니다.");
+            return;
+        }
+
+        instantiatedGates.Clear();
+        layerVerticalOffsets.Clear();
+        connectionLines.Clear();
+        CalculateLayerOffsets(circuitData);
+
+        // Input Gates
+        float inputOffset = layerVerticalOffsets.ContainsKey(0) ? layerVerticalOffsets[0] : 0f;
+        for (int i = 0; i < circuitData.InputGates.Count; i++)
+        {
+            PlaceGate(circuitData.InputGates[i], 0, i, inputOffset);
+        }
+
+        // Hidden Layers
+        for (int layerIndex = 0; layerIndex < circuitData.HiddenLayers.Count; layerIndex++)
+        {
+            List<GateData> layer = circuitData.HiddenLayers[layerIndex];
+            int currentLayerMapIndex = layerIndex + 1; // 실제 맵에서의 레이어 인덱스
+            float hiddenOffset = layerVerticalOffsets.ContainsKey(currentLayerMapIndex) ? layerVerticalOffsets[currentLayerMapIndex] : 0f;
+            for (int gateIndex = 0; gateIndex < layer.Count; gateIndex++)
+            {
+                PlaceGate(layer[gateIndex], currentLayerMapIndex, gateIndex, hiddenOffset);
+            }
+        }
+
+        // Output Gates
+        int outputLayerMapIndex = circuitData.HiddenLayers.Count + 1;
+        float outputOffset = layerVerticalOffsets.ContainsKey(outputLayerMapIndex) ? layerVerticalOffsets[outputLayerMapIndex] : 0f;
+        for (int i = 0; i < circuitData.OutputGates.Count; i++)
+        {
+            PlaceGate(circuitData.OutputGates[i], outputLayerMapIndex, i, outputOffset);
+        }
+
+        // 3. 전체 레이아웃 수평 중앙 정렬
+        CenterLayoutHorizontally();
+
+        // 4. 연결선 생성
+        CreateConnections(circuitData);
+
+        Debug.Log("맵 생성이 완료되었습니다.");
+    }
+#else
+    public void GenerateMap(TextAsset jsonFile)
     {
         // 0. 기존 맵 오브젝트 삭제 (필요시)
         ClearMap();
@@ -148,6 +215,7 @@ public class MapGenerator : MonoBehaviour
 
         Debug.Log("맵 생성이 완료되었습니다.");
     }
+#endif
 
     // 각 레이어의 수직(Z) 시작 오프셋 계산
     void CalculateLayerOffsets(LogicCircuitData circuitData)
