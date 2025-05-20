@@ -8,7 +8,8 @@ This project is a logic gate game where the goal is to complete incomplete logic
   * **Random Logic Gate Generator Based on Karnaugh Maps**: Generates various random logic gate stages using Karnaugh maps.
   * **Map Generator Using Boolean Algebra Expressions**: Provides functionality to generate game maps (stages) based on Boolean algebra expressions.
   * **Playable Game**: Allows users to manipulate logic gates and solve stages through gameplay.
-
+## Document
+- AI genertaed document: https://public.komment.ai/github/highlow12/Logic-gate-Game
 ## Getting Started
 
 Instructions to set up and run the project in a local environment.
